@@ -1,1 +1,6 @@
 # ТODO
+
+# Рекомендованные образы:
+# s3 - minio/minio:latest
+# db - pgvector/pgvector:0.7.0-pg15
+# other - python:3.11-slim
