@@ -30,13 +30,24 @@ def init_dataset():
     db = VectorDB(DATABASE_URL)
     db.connect()
     db.init_table()
+
+    # Проверяем, есть ли уже данные
+    cur = db.conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM embeddings;")
+    count = cur.fetchone()[0]
+    cur.close()
+
+    if count > 0:
+        print(f"База уже содержит {count} записей. Пропускаем инициализацию.")
+        db.close()
+        return True
     
-    for img_id, image_path in enumerate(tqdm(image_files, desc="Loading images", unit="img")):
+    for image_path in tqdm(image_files, desc="Loading images", unit="img"):
         try:
-            embedding = embed_image(str(image_path), device="cpu")
-            db.insert_image(embedding, img_id)
-        except Exception:
-            pass
+            embedding = embed_image(str(image_path)) # из-за ручного добавления id счётчик не меняется
+            db.insert_image(embedding)
+        except Exception as e:
+            print(f'DB Error while loading image {image_path}: {e}')
     
     db.close()
     return True
