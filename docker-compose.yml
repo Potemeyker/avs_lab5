@@ -1,6 +1,77 @@
-# ТODO
+version: '3.8'
 
-# Рекомендованные образы:
-# s3 - minio/minio:latest
-# db - pgvector/pgvector:0.7.0-pg15
-# other - python:3.11-slim
+services:
+  postgres:
+    image: ankane/pgvector:v0.4.1
+    container_name: cat_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cats
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: cat_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  api:
+    build: .
+    container_name: cat_api
+    command: python -m app.api
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  ui:
+    build: .
+    container_name: cat_ui
+    command: python -m app.ui
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    environment:
+      - API_URL=http://api:5001
+    depends_on:
+      - api
+
+  init-job:
+    build: .
+    container_name: cat_init
+    command: python scripts/init_db.py
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    volumes:
+      - ./data/cat_images:/app/data/cat_images
+
+volumes:
+  pg_data:
+  minio_data:
