@@ -65,7 +65,7 @@ def embed_image(image_path) -> np.ndarray:
 
     img_tensor = transform(img).unsqueeze(0).to("cpu")
 
-    model = load_model("cpu")
+    model = load_model()
     with torch.no_grad():
         emb = model(img_tensor)
 
